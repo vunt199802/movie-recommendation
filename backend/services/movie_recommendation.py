@@ -27,3 +27,8 @@ class Recommender:
 
     def _retrieve_documents(self):
         """an internal method that will do a semantic search on a vector database to find relevant documents"""
+        pass
+
+    def recommend(self):
+        """recommend a movie based on the user interest and the relevant movies in the vector database"""
+        pass
