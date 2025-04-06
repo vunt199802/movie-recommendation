@@ -12,7 +12,7 @@ class Recommender:
     """Service to recommend movies"""
 
     def __init__(self, openai_client, supabase_client) -> None:
-        self.openai_client = openai_client
+        self.openai_client:AsyncOpenAI = openai_client
         self.supabase_client = supabase_client
         self.model = "gpt-4o-mini"
         self.messages = [
@@ -53,20 +53,39 @@ class Recommender:
         ).execute()
 
         document = response.data[0]["content"]
-    def recommend(self):
+        return document, query
+    async def recommend(self, favorite_movie_with_reason:str, release_year_preference:str, mood_preference:str):
         """recommend a movie based on the user interest and the relevant movies in the vector database"""
-        pass
+        movie, interest = await self._retrieve_documents(favorite_movie_with_reason, release_year_preference, mood_preference)
+        messages = [
+            {
+                "role":"system",
+                "content":"""You are an enthusiastic movie expert who loves recommending movies to people. 
+                You will be given two pieces of information - some context about movies and a user interest. 
+                Your main job is to formulate a short answer to the question using the provided context. 
+                If you are unsure, say, "Sorry, I don't know the answer." 
+                Please do not make up the answer. Always speak as if you were chatting to a friend."""
+            },
+            {
+                "role":"user",
+                "content":f"context: {movie}, interest:{interest}"
+            }
+        ]
+
+        response = await self.openai_client.chat.completions.create(model=self.model, messages=messages)
+        return response.choices[0].message.content
 
 
 
 
-if __name__ == "__main__":
-    async def main():
-        recommender = await Recommender.setup_recommender()
-        await recommender._retrieve_documents(
-            "The Shawshank Redemption Because it taught me to never give up hope no matter how hard life gets",
-            "I want to watch movies that were released after 1990",
-            "I want to watch something stupid and fun"
-        )
+# if __name__ == "__main__":
+#     async def main():
+#         recommender = await Recommender.setup_recommender()
+#         result = await recommender.recommend(
+#             "The Shawshank Redemption Because it taught me to never give up hope no matter how hard life gets",
+#             "I want to watch movies that were released after 1990",
+#             "I want to watch something stupid and fun"
+#         )
+#         print(result)
 
-    asyncio.run(main())
+#     asyncio.run(main())
